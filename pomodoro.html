@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro Timer 🍅</title>
+  <style>
+    :root {
+      --bg-light: #fefefe;
+      --text-light: #333;
+      --bg-dark: #1e1e2f;
+      --text-dark: #f0f0f0;
+      --accent: #ff5555;
+      --accent-light: #ff7777;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 50px;
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.4s, color 0.4s;
+    }
+    body.light {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    h1 {
+      font-weight: 700;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      user-select: none;
+    }
+    .tomato {
+      font-size: 3.5rem;
+      transform: rotate(-10deg);
+      user-select: none;
+    }
+    #modeToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 25px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      user-select: none;
+      z-index: 10;
+    }
+    #modeToggle:hover {
+      background: var(--accent-light);
+    }
+    .btn-container {
+      margin: 30px 0 40px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      min-width: 160px;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+    button:hover {
+      background: var(--accent-light);
+    }
+    .timer-wrapper {
+      width: 250px;
+      height: 250px;
+      max-width: 250px;
+      max-height: 250px;
+      position: relative;
+    }
+    svg {
+      width: 250px;
+      height: 250px;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin: 0 auto;
+      transform: rotate(-90deg);
+    }
+    circle {
+      fill: none;
+      stroke-width: 15;
+      stroke-linecap: round;
+    }
+    .bg-circle {
+      stroke: var(--accent-light);
+      opacity: 0.2;
+    }
+    .progress-circle {
+      stroke: var(--accent);
+      stroke-dasharray: 754;
+      stroke-dashoffset: 754;
+      transition: stroke-dashoffset 1s linear;
+    }
+    #timer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: monospace;
+      font-size: 4.5rem;
+      font-weight: 700;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="modeToggle">Light Mode</button>
+
+  <h1><span class="tomato">🍅</span> Pomodoro Timer</h1>
+
+  <div class="btn-container">
+    <button id="startBtn">Start Work (25 min)</button>
+    <button id="breakBtn">Break (5 min)</button>
+    <button id="longBreakBtn">Long Break (15 min)</button>
+  </div>
+
+  <div class="timer-wrapper">
+    <svg viewBox="0 0 260 260">
+      <circle class="bg-circle" r="120" cx="130" cy="130" stroke-width="15"></circle>
+      <circle class="progress-circle" r="120" cx="130" cy="130" stroke-width="15"></circle>
+    </svg>
+    <div id="timer">00:00</div>
+  </div>
+
+  <script>
+    const modeToggleBtn = document.getElementById('modeToggle');
+    modeToggleBtn.onclick = () => {
+      document.body.classList.toggle('light');
+      modeToggleBtn.textContent = document.body.classList.contains('light') ? 'Dark Mode' : 'Light Mode';
+    };
+
+    const FULL_DASH_ARRAY = 754;
+    const progressCircle = document.querySelector('.progress-circle');
+    const timerDisplay = document.getElementById('timer');
+
+    let countdown;
+    let timeLeft = 0;
+    let totalTime = 0;
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const s = (seconds % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function setCircleProgress(timeLeft, totalTime) {
+      const offset = FULL_DASH_ARRAY * (timeLeft / totalTime);
+      progressCircle.style.strokeDashoffset = FULL_DASH_ARRAY - offset;
+    }
+
+    function startTimer(duration) {
+      clearInterval(countdown);
+      totalTime = duration;
+      timeLeft = duration;
+      timerDisplay.textContent = formatTime(timeLeft);
+      setCircleProgress(timeLeft, totalTime);
+
+      countdown = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = formatTime(timeLeft);
+        setCircleProgress(timeLeft, totalTime);
+
+        if (timeLeft <= 0) {
+          clearInterval(countdown);
+          alert('Time is up! ⏰');
+          setCircleProgress(0, totalTime);
+        }
+      }, 1000);
+    }
+
+    // REPLACE with your actual backend API URL
+    const API_BASE_URL = 'https://pomodoro-koqj.onrender.com';
+    // const API_BASE_URL = 'http://127.0.0.1:8000';
+
+    async function callApi(endpoint) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/${endpoint}`);
+        if (!response.ok) throw new Error('API call failed');
+        const data = await response.json();
+        console.log('API response:', data);
+      } catch (error) {
+        console.error('API error:', error);
+        alert('Failed to communicate with the backend API.');
+      }
+    }
+
+    document.getElementById('startBtn').onclick = async () => {
+      await callApi('start');
+      startTimer(25 * 60);
+    };
+
+    document.getElementById('breakBtn').onclick = async () => {
+      await callApi('break');
+      startTimer(5 * 60);
+    };
+
+    document.getElementById('longBreakBtn').onclick = async () => {
+      await callApi('longbreak');
+      startTimer(15 * 60);
+    };
+  </script>
+</body>
+</html>
